@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 
 import { useNavigate, Link, useLocation } from "react-router-dom";
 
@@ -25,9 +25,12 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
+  Input,
+  InputGroup,
+  InputLeftElement,
 } from "@chakra-ui/react";
 
-import { AddIcon, DeleteIcon } from "@chakra-ui/icons";
+import { AddIcon, DeleteIcon, SearchIcon } from "@chakra-ui/icons";
 
 import QuizCard from "./QuizCard";
 
@@ -45,10 +48,12 @@ const lightColors = ["#E27D60", "#85DCBA", "#E8A87C", "#C38D9E", "#41B3A3"];
 
 const darkColors = ["#1D3557", "#457B9D", "#A8DADC", "#F1FAEE", "#E63946"];
 
-const Dashboard = () => {
+const QuizListView = () => {
   const navigate = useNavigate();
 
   const [quizzes, setQuizzes] = useState([]);
+
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [deleteQuiz, setDeleteQuiz] = useState(null);
 
@@ -70,34 +75,51 @@ const Dashboard = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const getData = useCallback(
+    async (query) => {
+      let url = `${backend_url}/quizzes/`;
+      if (query) {
+        url = `${backend_url}/search/?q=${query}`;
+      }
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `token ${auth.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error("There was an error.");
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.results) {
+        setQuizzes(result.results);
+      } else {
+        setQuizzes(result);
+      }
+    },
+    [auth.token],
+  );
+
   useEffect(() => {
-    getData();
-  }, []);
+    const handler = setTimeout(() => {
+      getData(searchTerm);
+    }, 500);
 
-  const getData = async () => {
-    const response = await fetch(`${backend_url}/quizzes/`, {
-      method: "GET",
-
-      headers: {
-        "Content-Type": "application/json",
-
-        Authorization: `token ${auth.token}`,
-      },
-    });
-
-    if (!response.ok) {
-      console.error("There was an error.");
-
-      return;
-    }
-
-    const result = await response.json();
-
-    setQuizzes(result);
-  };
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm, getData]);
 
   const refreshQuizzes = () => {
-    getData();
+    setSearchTerm("");
+    if (!searchTerm) {
+      getData("");
+    }
   };
 
   const fetchQuizDetails = async (slug) => {
@@ -221,12 +243,27 @@ const Dashboard = () => {
 
       <Box>
         <Center>
-          <SimpleGrid columns={[1, 2, 3, 4]} spacing="40px" rounded="lg" m="4">
-            <Box
-              d="flex"
-              alignItems="center"
-              justifyContent="center"
-              border="1px"
+          <VStack spacing={4} mt={8}>
+            <Box w="60%">
+              <InputGroup>
+                <InputLeftElement
+                  pointerEvents="none"
+                  children={<SearchIcon color="gray.300" />}
+                />
+                <Input
+                  type="text"
+                  placeholder="Search quizzes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </InputGroup>
+            </Box>
+            <SimpleGrid columns={[1, 2, 3, 4]} spacing="40px" rounded="lg" m="4">
+              <Box
+                d="flex"
+                alignItems="center"
+                justifyContent="center"
+                border="1px"
               borderColor="gray.300"
               borderRadius="md"
               height="200px"
@@ -257,6 +294,7 @@ const Dashboard = () => {
               />
             ))}
           </SimpleGrid>
+        </VStack>
         </Center>
 
         <AlertDialog
@@ -380,4 +418,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default QuizListView;

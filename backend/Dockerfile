@@ -1,4 +1,4 @@
-FROM python:3.12.3
+FROM python:3.12.3-slim
 
 WORKDIR /app
 
@@ -6,11 +6,12 @@ COPY requirements.txt requirements.txt
 
 RUN pip install -r requirements.txt
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libcurl4-openssl-dev \
     make \
-    gcc
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 

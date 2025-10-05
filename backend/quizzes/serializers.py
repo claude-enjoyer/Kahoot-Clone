@@ -16,7 +16,6 @@ class AnswerSerializer(WritableNestedModelSerializer):
 
 
 class QuestionSerializer(WritableNestedModelSerializer):
-    index = serializers.IntegerField(read_only=True)
     answers = AnswerSerializer(many=True)
 
     class Meta:
@@ -54,4 +53,9 @@ class QuizSerializer(WritableNestedModelSerializer):
             raise serializers.ValidationError("Must be at least one question")
         if len(data["questions"]) > 50:
             raise serializers.ValidationError("Can not have more than 50 questions")
+
+        question_indices = [question["index"] for question in data["questions"]]
+        if len(question_indices) != len(set(question_indices)):
+            raise serializers.ValidationError("Question indices must be unique")
+
         return data
