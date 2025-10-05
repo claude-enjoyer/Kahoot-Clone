@@ -42,6 +42,7 @@ class QuizPostTests(APITestCase):
                         {"body": "d"},
                     ],
                     "correct_answer": 4,
+                    "index": 1,
                 }
             ],
         }
@@ -66,6 +67,7 @@ class QuizPostTests(APITestCase):
                         {"body": "c"},
                     ],
                     "correct_answer": 4,
+                    "index": 1,
                 }
             ],
         }
@@ -100,6 +102,7 @@ class QuizPostTests(APITestCase):
                         {"body": "e"},
                     ],
                     "correct_answer": 4,
+                    "index": 1,
                 }
             ],
         }
@@ -133,6 +136,7 @@ class QuizPostTests(APITestCase):
                         {"body": "d"},
                     ],
                     "correct_answer": 1,
+                    "index": 1,
                 }
             ],
         }

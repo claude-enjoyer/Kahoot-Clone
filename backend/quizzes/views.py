@@ -5,46 +5,42 @@ from .serializers import QuizSerializer, QuestionSerializer, AnswerSerializer
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
-from django_elasticsearch_dsl_drf.filter_backends import (
-    FilteringFilterBackend,
-    OrderingFilterBackend,
-    DefaultOrderingFilterBackend,
-    CompoundSearchFilterBackend,
-)
+from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
+from elasticsearch_dsl import Q
 from .documents import QuizDocument
 from .serializers import QuizSerializer
 
 
-class QuizSearchView(DocumentViewSet):
-    document = QuizDocument
-    serializer_class = QuizSerializer
-    lookup_field = "slug"
-    permission_classes = [IsAuthenticated]
-    filter_backends = [
-        FilteringFilterBackend,
-        OrderingFilterBackend,
-        DefaultOrderingFilterBackend,
-        CompoundSearchFilterBackend,
-    ]
-    search_fields = ("name", "questions.body", "questions.answers.body")
-    multi_match_search_fields = ("name", "questions.body", "questions.answers.body")
-    filter_fields = {
-        "name": "name",
-        "creator.username": "creator.username",
-    }
-    ordering_fields = {
-        "name": "name",
-        "creator.username": "creator.username",
-    }
-    ordering = ("name",)
+class PaginatedElasticSearchAPIView(APIView):
+    serializer_class = None
+    document_class = None
 
-    def filter_queryset(self, queryset):
+    def get(self, request, *args, **kwargs):
         # Get the current user from the request
         user = self.request.user
         # Filter the queryset to only include quizzes created by the current user
-        queryset = queryset.filter("term", creator__username=user.username)
-        return queryset
+        # queryset = queryset.filter("term", creator__username=user.username)
+        # return queryset
+        query = request.GET.get("q")
+        search = self.document_class.search().query(
+            "multi_match",
+            query=query,
+            fields=["name", "questions.body", "questions.answers.body"],
+        )
+        search = search.filter("term", creator__username=user.username)
+        response = search.execute()
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        paginated_results = paginator.paginate_queryset(response.hits, request)
+        serializer = self.serializer_class(paginated_results, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
+class QuizSearchView(PaginatedElasticSearchAPIView):
+    serializer_class = QuizSerializer
+    document_class = QuizDocument
 
 
 class QuizView(viewsets.ModelViewSet):
