@@ -109,9 +109,10 @@ class Player(models.Model):
 
     # helper functions to convert between string and list
     def set_answer(self, question_index, answer):
-        if question_index < 1 or question_index > self.game.quiz.questions.count():
+        questions = self.game.quiz.questions
+        if question_index < 1 or question_index > questions.count():
             raise ValueError(
-                f"get_answer: question_index should be between 1 and {self.game.quiz.questions.count()}, got {question_index}"
+                f"get_answer: question_index should be between 1 and {questions.count()}, got {question_index}"
             )
         if int(answer) < 1 or int(answer) > 4:
             raise ValueError(
@@ -122,7 +123,8 @@ class Player(models.Model):
             return
         bonus = ast.literal_eval(f"[{self.answer_bonus}]")
         answers[question_index - 1] = answer
-        if self.game.quiz.questions.get(index=question_index).correct_answer == answer:
+        correct_answers = {q.index: q.correct_answer for q in questions.all()}
+        if correct_answers.get(question_index) == answer:
             if not self.game.timer:
                 self.game.timer = timezone.now()
                 bonus[question_index - 1] = 100
@@ -149,18 +151,22 @@ class Player(models.Model):
     def num_correct_answers(self):
         correct = 0
         answers = self.get_answer_list()
-        quiz = self.game.quiz
-        for i in range(0, quiz.questions.count()):
-            if answers[i] == quiz.questions.get(index=i + 1).correct_answer:
+        # Create a dictionary of correct answers for efficient lookup
+        correct_answers = {
+            q.index: q.correct_answer for q in self.game.quiz.questions.all()
+        }
+        for i, player_answer in enumerate(answers):
+            if player_answer == correct_answers.get(i + 1):
                 correct += 1
         return correct
 
     # check if player got a given question correct
     def question_correct(self, question_index):
-        return (
-            self.get_answer(question_index)
-            == self.game.quiz.questions.get(index=question_index).correct_answer
-        )
+        # Create a dictionary of correct answers for efficient lookup
+        correct_answers = {
+            q.index: q.correct_answer for q in self.game.quiz.questions.all()
+        }
+        return self.get_answer(question_index) == correct_answers.get(question_index)
 
     # check if player got the previous question correct
     def previous_question_correct(self):

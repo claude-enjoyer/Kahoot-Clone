@@ -20,5 +20,4 @@ channels~=3.0.4
 django-eventstream~=4.4.1
 celery
 django-celery-email
-# elasticsearch-dsl==7.0.0
-git+https://github.com/kisiel/django-elasticsearch-dsl-drf.git@a27fa1eb7739c8f989b15f7ef891969be3105f68
+django-elasticsearch-dsl-drf
